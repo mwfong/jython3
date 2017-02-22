@@ -1205,11 +1205,20 @@ public class PySystemState extends PyObject implements AutoCloseable, Closeable,
 	if (aFile == null && CLASS_PATH_DIR != null)
 	    aFile = fileFor (CLASS_PATH_DIR, path);
 
+	InputStream iStream;
+
 	if (aFile != null)
-	    return new FileInputStream (aFile);
+	    iStream = new FileInputStream (aFile);
+
 	// If the file was not found, query class loader for a resource
-	else
-	    return PySystemState.class.getClassLoader ().getResourceAsStream (path);
+	else {
+	    iStream = PySystemState.class.getClassLoader ().getResourceAsStream (path);
+
+	    if (iStream == null)
+		throw new FileNotFoundException (path);
+	}
+
+	return iStream;
     }
 
     private static PyTuple getVersionInfo() {
