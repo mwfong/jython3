@@ -78,7 +78,7 @@ CP=$JYTHON_HOME/jython-dev.jar
 
 if [ -f "$CP" ] ; then
   # add necessary jars for command-line execution
-  for j in "$JYTHON_HOME"/javalib/*.jar; do
+  for j in "$JYTHON_HOME"/javalib/*.jar "$JYTHON_HOME/.."; do
     if [ "$CP" ]; then
       CP="$CP$CP_DELIMITER$j"
     else
