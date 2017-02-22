@@ -186,6 +186,7 @@ setting {envvar_specifier}JYTHON_HOME.""".format(
                     envvar_specifier="%" if self.uname == "windows" else "$"))
         else:
             jars = [os.path.join(self.jython_home, "jython.jar")]
+        jars.append (os.path.dirname (self.jython_home))
         self._jython_jars = jars
         return self._jython_jars
 
