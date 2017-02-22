@@ -68,6 +68,26 @@ public class PySystemState extends PyObject implements AutoCloseable, Closeable,
     private static final String VFSZIP_PREFIX = "vfszip:";
     private static final String VFS_PREFIX = "vfs:";
 
+    private static final File   CLASS_PATH_DIR;		// used by inputStreamFor ()
+
+    // Determine (optional) class path directory
+
+    static {
+	String [] classPaths = System.getProperty ("java.class.path").split (System.getProperty ("path.separator"));
+	File	  cPathDir   = null;
+
+	for (String classPath: classPaths) {
+	    File aFile = new File (classPath);
+
+	    if (aFile.isDirectory ()) {
+		cPathDir = aFile;
+		break;
+	    }
+	}
+
+	CLASS_PATH_DIR = cPathDir;
+    }
+
     // XXX: should this be "mbcs" on Windows, like on CPython?
     private static final PyUnicode fileSystemEncoding = new PyUnicode(System.getProperty("file.encoding"));
 
@@ -1149,8 +1169,8 @@ public class PySystemState extends PyObject implements AutoCloseable, Closeable,
         SysModule.setObject("_jy_console", Py.java2py(Py.getConsole()));
 
         try {
-            InputStream _frozen_importlib_input =  new FileInputStream(new File("src/resources/frozen_importlib/_frozen_importlib.class"));
-            InputStream _frozen_importlib_external_input =  new FileInputStream(new File("src/resources/frozen_importlib/_frozen_importlib_external.class"));
+            InputStream _frozen_importlib_input = inputStreamFor ("src/resources/frozen_importlib/_frozen_importlib.class");
+            InputStream _frozen_importlib_external_input = inputStreamFor ("src/resources/frozen_importlib/_frozen_importlib_external.class");
             PyObject _frozen_importlib = imp.loadFromCompiled("_frozen_importlib", _frozen_importlib_input, "_bootstrap.py", "_frozen_importlib.class");
             imp.loadFromCompiled("_frozen_importlib_external", _frozen_importlib_external_input, "_bootstrap_external.py", "_frozen_importlib_external.class");
             Py.defaultSystemState.importlib = _frozen_importlib;
@@ -1162,6 +1182,34 @@ public class PySystemState extends PyObject implements AutoCloseable, Closeable,
         Py.defaultSystemState.initstdio();
         Py.defaultSystemState.initEncoding();
         return Py.defaultSystemState;
+    }
+
+    /*
+     * Returns a File for a path or null if it could not be found
+     */
+    private static File fileFor (File parent, String path) {
+	File aFile = new File (parent, path);
+
+	return aFile.isFile () ? aFile : null;
+    }
+
+    /*
+     * Returns an InputStream for a path
+     */
+    private static InputStream inputStreamFor (String path) throws FileNotFoundException {
+
+	// First directly use the path
+	File aFile = fileFor (null, path);
+
+	// If the file was not found, prepend the optional class path directory
+	if (aFile == null && CLASS_PATH_DIR != null)
+	    aFile = fileFor (CLASS_PATH_DIR, path);
+
+	if (aFile != null)
+	    return new FileInputStream (aFile);
+	// If the file was not found, query class loader for a resource
+	else
+	    return PySystemState.class.getClassLoader ().getResourceAsStream (path);
     }
 
     private static PyTuple getVersionInfo() {
